@@ -1,5 +1,5 @@
 import shutil
-
+import subprocess
 BUILTINS = {"exit", "echo", "type"}
 
 
@@ -17,12 +17,18 @@ def main():
             command = input("$ ")
         except EOFError:
             break
-        if command == "exit":
+        cmd = command.split()[0]
+        if cmd == "exit":
             break
-        if command.startswith("echo "):
-            print(command[5:])
-        elif command.startswith("type "):
-            print(type_of(command[5:]))
+        if len(command) >= len(cmd+1):
+            args_string = command[len(cmd+1):]
+            args = args_string.split()
+        if cmd == "echo":
+            print(args_string)
+        elif cmd == "type":
+            print(type_of(args_string))
+        elif shutil.which(cmd):
+            subprocess.run([cmd, *args])
         else:
             print(f"{command}: command not found")
 
