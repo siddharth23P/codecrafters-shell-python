@@ -31,7 +31,11 @@ def main():
         elif cmd == "pwd":
             print(os.getcwd())
         elif cmd == "cd":
-            os.chdir(args_string)
+            path = os.path.expanduser(args[0] if args else "~")
+            try:
+                os.chdir(path)
+            except FileNotFoundError:
+                print(f"cd: {path}: No such file or directory")
         elif shutil.which(cmd):
             subprocess.run([cmd, *args])
         else:
