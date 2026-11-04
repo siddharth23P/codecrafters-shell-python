@@ -7,9 +7,9 @@ def main():
         command=input()
         if command == "exit":
             break
-        if command.startswith("echo "):
+        elif command.startswith("echo "):
             print(f"{command[5:]}")
-        if command.startswith("type "):
+        elif command.startswith("type "):
             if command[5:] in __shell_builtins__:
                 print(f"{command[5:]} is a shell builtin")
             else:
