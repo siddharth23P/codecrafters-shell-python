@@ -20,8 +20,8 @@ def main():
         cmd = command.split()[0]
         if cmd == "exit":
             break
-        if len(command) >= len(cmd+1):
-            args_string = command[len(cmd+1):]
+        if len(command) >= len(cmd)+1:
+            args_string = command[len(cmd)+1:]
             args = args_string.split()
         if cmd == "echo":
             print(args_string)
