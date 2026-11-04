@@ -30,6 +30,8 @@ def main():
             print(type_of(args_string))
         elif cmd == "pwd":
             print(os.getcwd())
+        elif cmd == "cd":
+            os.chdir(args_string)
         elif shutil.which(cmd):
             subprocess.run([cmd, *args])
         else:
