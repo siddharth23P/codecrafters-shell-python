@@ -2,8 +2,8 @@ import shutil
 import subprocess
 import os
 import sys
-from collections import deque
-BUILTINS = {"exit", "echo", "type", "pwd"}
+
+BUILTINS = {"exit", "echo", "type", "pwd","cd"}
 
 
 def type_of(cmd):
@@ -17,7 +17,9 @@ def parse(line):
     tokens, cur, in_quote, in_dbl_quote, in_slash, started = [], "", False, False, False, False
     for ch in line:
         if in_slash:
-            in_slash = not in_slash
+            in_slash = False
+            if in_dbl_quote and ch not in '\\"$`':
+                cur += "\\"
             cur += ch
             started = True
         elif ch == "\\" and not (in_quote):
@@ -64,6 +66,10 @@ def main():
             command = input("$ ")
         except EOFError:
             break
+        
+        if not command.strip():
+            continue
+        
         tokens, out_file, err_file = split_redirect(parse(command))
         cmd, *args = tokens
         
