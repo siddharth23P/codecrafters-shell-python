@@ -49,16 +49,20 @@ def parse(line):
     return tokens
 
 def split_redirect(tokens):
-    cmd, out, err = [], None, None
+    cmd, out, err, outa, erra = [], None, None, None, None
     it = iter(tokens)
     for tok in it:
         if tok in (">", "1>"):
             out = next(it, None) 
+        elif tok in (">>", "1>>"):
+            outa = next(it, None)
         elif tok == "2>":
             err = next(it, None)
+        elif tok in ("2>>"):
+            erra = next(it, None)
         else:
             cmd.append(tok)
-    return cmd, out, err
+    return cmd, out, err, outa, erra
 
 def main():
     while True:
@@ -70,14 +74,25 @@ def main():
         if not command.strip():
             continue
         
-        tokens, out_file, err_file = split_redirect(parse(command))
+        tokens, out_file, err_file, outa_file, erra_file = split_redirect(parse(command))
         cmd, *args = tokens
         
         if cmd == "exit":
             break
        
-        out = open(out_file, "w") if out_file else sys.stdout
-        err = open(err_file, "w") if err_file else sys.stderr
+        if out_file:
+            out = open(out_file, "w")
+        elif outa_file:
+            out = open(outa_file, "+a")
+        else:
+            out = sys.stdout
+        
+        if err_file:
+            err = open(err_file, "w")
+        elif erra_file:
+            err = open(erra_file, "+a")
+        else:
+            err = sys.stderr
         
         if cmd == "echo":
             print(" ".join(args), file=out)
