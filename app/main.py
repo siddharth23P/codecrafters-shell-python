@@ -5,7 +5,7 @@ import sys
 import readline
 
 BUILTINS = {"exit", "echo", "type", "pwd", "cd"}
-
+_matches = []
 def executables_in(directory):
     try:
         return [e.name for e in os.scandir(directory)
@@ -19,11 +19,35 @@ def get_executables():
         names.update(executables_in(d))
     return names
 
+def complete_path(text):
+    dirname, prefix = os.path.split(text)
+    try:
+        entries = sorted(os.listdir(dirname or "."))
+    except OSError:
+        return []
+    matches = []
+    for name in entries:
+        if not name.startswith(prefix):
+            continue
+        if name.startswith(".") and not prefix.startswith("."):
+            continue
+        full = os.path.join(dirname, name)
+        matches.append(full + ("/" if os.path.isdir(full) else " "))
+    return matches
+
+_matches = []
+    
 def completer(text,state):
-    execs = get_executables()
-    match_list = sorted(execs | BUILTINS)
-    matches = [c + " " for c in match_list if c.startswith(text)]
-    return matches[state] if state < len(matches) else None
+    global _matches
+    if state == 0:
+        before = readline.get_line_buffer()[:readline.get_begidx()]
+        if before.strip() == "":
+            execs = get_executables()
+            match_list = sorted(execs | BUILTINS)
+            _matches = [c + " " for c in match_list if c.startswith(text)]
+        else:
+            _matches = complete_path(text)
+    return _matches[state] if state < len(_matches) else None
 
 readline.set_completer(completer)
 if "libedit" in (readline.__doc__ or ""):
