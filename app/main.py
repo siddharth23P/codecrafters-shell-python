@@ -5,17 +5,23 @@ import sys
 import readline
 
 BUILTINS = {"exit", "echo", "type", "pwd", "cd"}
-PATH = os.getcwd()
 
-def get_executables():
+def executables_in(directory):
     try:
-        return [e.name for e in os.scandir(PATH)
+        return [e.name for e in os.scandir(directory)
                 if e.is_file() and os.access(e.path, os.X_OK)]
     except (FileNotFoundError, NotADirectoryError, PermissionError):
         return []
+
+def get_executables():
+    names = set()
+    for d in os.environ.get("PATH", "").split(os.pathsep):
+        names.update(executables_in(d))
+    return names
+
 def completer(text,state):
     execs = get_executables()
-    match_list = sorted(set(execs) | BUILTINS)
+    match_list = sorted(execs | BUILTINS)
     matches = [c + " " for c in match_list if c.startswith(text)]
     return matches[state] if state < len(matches) else None
 
@@ -94,6 +100,8 @@ def main():
             continue
         
         tokens, out_file, err_file, outa_file, erra_file = split_redirect(parse(command))
+        if not tokens:
+            continue
         cmd, *args = tokens
         
         if cmd == "exit":
@@ -102,37 +110,37 @@ def main():
         if out_file:
             out = open(out_file, "w")
         elif outa_file:
-            out = open(outa_file, "+a")
+            out = open(outa_file, "a")
         else:
             out = sys.stdout
         
         if err_file:
             err = open(err_file, "w")
         elif erra_file:
-            err = open(erra_file, "+a")
+            err = open(erra_file, "a")
         else:
             err = sys.stderr
         
         if cmd == "echo":
             print(" ".join(args), file=out)
         elif cmd == "type":
-            print(type_of(args[0]), file=out)
+            for name in args:
+                print(type_of(name), file=out)
         elif cmd == "pwd":
-            print(PATH, file=out)
+            print(os.getcwd(), file=out)
         elif cmd == "cd":
             path = os.path.expanduser(args[0] if args else "~")
             try:
-                PATH = os.chdir(path)
+                os.chdir(path)
             except FileNotFoundError:
                 print(f"cd: {path}: No such file or directory",file=err)
         elif shutil.which(cmd):
             subprocess.run([cmd, *args],stdout=out,stderr=err)
         else:
             print(f"{cmd}: command not found",file=err)
-        # finally:
-        if out_file:
+        if out is not sys.stdout:
             out.close()
-        if err_file:
+        if err is not sys.stderr:
             err.close()
 
 
