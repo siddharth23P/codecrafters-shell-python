@@ -42,6 +42,7 @@ class Complete:
         for name in names:
             self.specs[name] = path
             
-    def remove_spec(self,spec):
-        if spec in self.specs:
-            self.specs.pop(spec)
+    def remove_spec(self,names):
+        for name in names:
+            if name in self.specs:
+                self.specs.pop(name)
