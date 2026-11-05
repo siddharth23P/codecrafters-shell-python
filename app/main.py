@@ -47,10 +47,14 @@ def parse(line):
     return tokens
 
 def split_redirect(tokens):
+    stdout = None
+    stderr = None
     for i, tok in enumerate(tokens):
         if tok in (">","1>"):
-            return tokens[:i], tokens[i+1] if i+1 < len(tokens) else None
-    return tokens, None
+            stdout = tokens[i+1] if i+1 < len(tokens) else None
+        elif tok in ("2>"):
+            stderr = tokens[i+1] if i+1 < len(tokens) else None
+    return tokens, stdout, stderr
 
 def main():
     while True:
@@ -58,9 +62,10 @@ def main():
             command = input("$ ")
         except EOFError:
             break
-        tokens, out_file = split_redirect(parse(command))
+        tokens, out_file, err_file = split_redirect(parse(command))
         cmd, *args = tokens
         out = open(out_file, "w") if out_file else sys.stdout
+        err = open(err_file, "w") if err_file else sys.stderr
         if cmd == "exit":
             break
         if cmd == "echo":
@@ -74,14 +79,16 @@ def main():
             try:
                 os.chdir(path)
             except FileNotFoundError:
-                print(f"cd: {path}: No such file or directory")
+                print(f"cd: {path}: No such file or directory",file=err)
         elif shutil.which(cmd):
             subprocess.run([cmd, *args],stdout=out)
         else:
-            print(f"{cmd}: command not found")
+            print(f"{cmd}: command not found",file=err)
         # finally:
         if out_file:
             out.close()
+        if err_file:
+            err.close()
 
 
 if __name__ == "__main__":
