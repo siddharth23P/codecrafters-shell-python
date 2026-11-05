@@ -19,7 +19,7 @@ def parse(line):
             in_slash = not in_slash
             cur += ch
             started = True
-        elif ch == "\\" and not (in_quote or in_dbl_quote):
+        elif ch == "\\" and not (in_quote):
             in_slash = not in_slash
             started = True
         elif ch == "\"":
