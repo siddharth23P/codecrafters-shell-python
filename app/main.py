@@ -1,9 +1,9 @@
 import shutil
 import subprocess
 import sys
-from parser import Parser
-from completer import Completer
-from BUILTINS import COMMANDS
+from .parser import Parser
+from .completer import Completer
+from .BUILTINS import COMMANDS
 
 BUILTINS = set(COMMANDS)
 Completer(BUILTINS).install()
