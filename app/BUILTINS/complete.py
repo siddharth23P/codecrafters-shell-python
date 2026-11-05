@@ -7,7 +7,8 @@ class Complete:
         self.err = err
         self.FUNC_MAP = {
             "-p": self.print_spec,
-            "-C": self.register,
+            "-C": self.register_spec,
+            "-r": self.remove_spec
             }
         self.FUNC_TO_CALL = []  # list of (flag, [flag args])
 
@@ -33,10 +34,14 @@ class Complete:
             else:
                 print(f"complete -C \'{self.specs[name]}\' {name}",file=self.out)
 
-    def register(self,args):
+    def register_spec(self,args):
         if len(args) < 2:
             print("complete: usage: complete -C command name",file=self.err)
             return
         path, *names = args
         for name in names:
             self.specs[name] = path
+            
+    def remove_spec(self,spec):
+        if spec in self.specs:
+            self.specs.pop(spec)
