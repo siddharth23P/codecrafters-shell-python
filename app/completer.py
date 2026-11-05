@@ -1,7 +1,7 @@
 import readline
 import os
 import subprocess
-from .BUILTINS import Complete
+from .BUILTINS.complete import Complete
 class Completer:
     def __init__(self, builtins, ):
         self.builtins = builtins
