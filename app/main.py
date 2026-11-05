@@ -47,14 +47,16 @@ def parse(line):
     return tokens
 
 def split_redirect(tokens):
-    stdout = None
-    stderr = None
-    for i, tok in enumerate(tokens):
-        if tok in (">","1>"):
-            stdout = tokens[i+1] if i+1 < len(tokens) else None
+    cmd, out, err = [], None, None
+    it = iter(tokens)
+    for tok in it:
+        if tok in (">", "1>"):
+            out = next(it, None) 
         elif tok == "2>":
-            stderr = tokens[i+1] if i+1 < len(tokens) else None
-    return tokens, stdout, stderr
+            err = next(it, None)
+        else:
+            cmd.append(tok)
+    return cmd, out, err
 
 def main():
     while True:
@@ -64,10 +66,13 @@ def main():
             break
         tokens, out_file, err_file = split_redirect(parse(command))
         cmd, *args = tokens
-        out = open(out_file, "w") if out_file else sys.stdout
-        err = open(err_file, "w") if err_file else sys.stderr
+        
         if cmd == "exit":
             break
+       
+        out = open(out_file, "w") if out_file else sys.stdout
+        err = open(err_file, "w") if err_file else sys.stderr
+        
         if cmd == "echo":
             print(" ".join(args), file=out)
         elif cmd == "type":
@@ -81,7 +86,7 @@ def main():
             except FileNotFoundError:
                 print(f"cd: {path}: No such file or directory",file=err)
         elif shutil.which(cmd):
-            subprocess.run([cmd, *args],stdout=out)
+            subprocess.run([cmd, *args],stdout=out,stderr=err)
         else:
             print(f"{cmd}: command not found",file=err)
         # finally:
