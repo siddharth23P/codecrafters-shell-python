@@ -72,7 +72,7 @@ def main():
         elif cmd == "cd":
             path = os.path.expanduser(args[0] if args else "~")
             try:
-                os.chdir(path, file=out)
+                os.chdir(path)
             except FileNotFoundError:
                 print(f"cd: {path}: No such file or directory")
         elif shutil.which(cmd):
