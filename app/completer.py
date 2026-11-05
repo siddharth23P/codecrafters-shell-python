@@ -44,9 +44,9 @@ class Completer:
         words = line[:readline.get_begidx()].split()
         cmd, prev = words[0], words[-1]
         env = {
-            **os.envirom, 
+            **os.environ, 
             "COMP_LINE": line,
-            "COMP_POINT": str(readline,get_endidx())
+            "COMP_POINT": str(readline.get_endidx())
             }
         result = subprocess.run(
             [prog,cmd,text,prev],
