@@ -1,7 +1,9 @@
 import readline
 import os
+import subprocess
+from .BUILTINS import Complete
 class Completer:
-    def __init__(self, builtins):
+    def __init__(self, builtins, ):
         self.builtins = builtins
         self.matches = []
 
@@ -35,6 +37,24 @@ class Completer:
             full = os.path.join(dirname, name)
             matches.append(full + ("/" if os.path.isdir(full) else " "))
         return matches
+    
+    @staticmethod
+    def complete_with_spec(prog,text):
+        line = readline.get_line_buffer()
+        words = line[:readline.get_begidx()].split()
+        cmd, prev = words[0], words[-1]
+        env = {
+            **os.envirom, 
+            "COMP_LINE": line,
+            "COMP_POINT": str(readline,get_endidx())
+            }
+        result = subprocess.run(
+            [prog,cmd,text,prev],
+            capture_output=True,
+            text=True,
+            env=env
+            )
+        return [m + " " for m in result.stdout.splitlines() if m]
 
     def complete(self, text, state):
         if state == 0:
@@ -43,7 +63,11 @@ class Completer:
                 match_list = sorted(self.get_executables() | self.builtins)
                 self.matches = [c + " " for c in match_list if c.startswith(text)]
             else:
-                self.matches = self.complete_path(text)
+                cmd = before.split()[0]
+                if cmd in Complete.specs:
+                    self.matches = self.complete_with_spec(Complete.specs[cmd], text)
+                else:
+                    self.matches = self.complete_path(text)
         return self.matches[state] if state < len(self.matches) else None
 
     def install(self):
