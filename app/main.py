@@ -2,10 +2,20 @@ import shutil
 import subprocess
 import os
 import sys
+import readline
 
 BUILTINS = {"exit", "echo", "type", "pwd","cd"}
 
+def completer(text,state):
+    matches = [c + " " for c in sorted(BUILTINS) if c.startswith(text)]
+    return matches[state] if state < len(matches) else None
 
+readline.set_completer(completer)
+if "libedit" in (readline.__doc__ or ""):
+    readline.parse_and_bind("bind ^I rl_complete")
+else:                                             # GNU readline (Linux / Codecrafters)
+    readline.parse_and_bind("tab: complete")
+    
 def type_of(cmd):
     if cmd in BUILTINS:
         return f"{cmd} is a shell builtin"
