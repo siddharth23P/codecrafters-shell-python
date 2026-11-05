@@ -4,10 +4,19 @@ import os
 import sys
 import readline
 
-BUILTINS = {"exit", "echo", "type", "pwd","cd"}
+BUILTINS = {"exit", "echo", "type", "pwd", "cd"}
+PATH = os.getcwd()
 
+def get_executables():
+    try:
+        return [e.name for e in os.scandir(PATH)
+                if e.is_file() and os.access(e.path, os.X_OK)]
+    except (FileNotFoundError, NotADirectoryError, PermissionError):
+        return []
 def completer(text,state):
-    matches = [c + " " for c in sorted(BUILTINS) if c.startswith(text)]
+    execs = get_executables()
+    match_list = sorted(execs.extend(BUILTINS))
+    matches = [c + " " for c in match_list if c.startswith(text)]
     return matches[state] if state < len(matches) else None
 
 readline.set_completer(completer)
@@ -109,11 +118,11 @@ def main():
         elif cmd == "type":
             print(type_of(args[0]), file=out)
         elif cmd == "pwd":
-            print(os.getcwd(), file=out)
+            print(PATH, file=out)
         elif cmd == "cd":
             path = os.path.expanduser(args[0] if args else "~")
             try:
-                os.chdir(path)
+                PATH = os.chdir(path)
             except FileNotFoundError:
                 print(f"cd: {path}: No such file or directory",file=err)
         elif shutil.which(cmd):
