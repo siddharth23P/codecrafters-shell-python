@@ -13,10 +13,19 @@ def type_of(cmd):
     return f"{cmd}: not found"
 
 def parse(line):
-    args, cur, in_quote, started = [], "", False, False
+    args, cur, in_quote, in_dbl_quote, started = [], "", False, False, False
     for ch in line:
-        if ch == "\'":
-            in_quote = not in_quote
+        if ch == "\"":
+            if not in_quote:
+                in_dbl_quote = not in_dbl_quote
+            else:
+                cur += ch
+            started = True
+        elif ch == "\'":
+            if not in_dbl_quote:
+                in_quote = not in_quote
+            else:
+                cur += ch
             started = True
         elif ch == " " and not in_quote:
             if started:
