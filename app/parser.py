@@ -12,7 +12,7 @@ class Parser:
         self.__split_redirect(self.__parse(line))
         
     def __parse(self,line):
-        self.tokens, cur, in_quote, in_dbl_quote, in_slash, started = [], "", False, False, False, False
+        self.__tokens, cur, in_quote, in_dbl_quote, in_slash, started = [], "", False, False, False, False
         for ch in line:
             if in_slash:
                 in_slash = False
@@ -37,31 +37,33 @@ class Parser:
                 started = True
             elif ch == " " and not (in_quote or in_dbl_quote):
                 if started:
-                    self.tokens.append(cur)
+                    self.__tokens.append(cur)
                     cur, started = "", False
             else:
                 cur += ch
                 started = True
         if started:
-            self.tokens.append(cur)
-        
+            self.__tokens.append(cur)
+        return self.__tokens
+
     def __split_redirect(self,tokens):
         cmd = []
         it = iter(tokens)
         for tok in it:
-            if tok in (">", "1>" ,"1>>"):
-                self.__out = next(it, None) 
+            if tok in (">", "1>", ">>", "1>>"):
+                self.__out = next(it, None)
                 self.__out_perm = 1
-                if tok == "1>>":
-                    self.__out_perm = 2 
+                if tok in (">>", "1>>"):
+                    self.__out_perm = 2
             elif tok in ("2>", "2>>"):
                 self.__err = next(it, None)
                 self.__err_perm = 1
-                if tok == "1>>":
+                if tok == "2>>":
                     self.__err_perm = 2
             else:
                 cmd.append(tok)
-        self.__cmd ,self.__args = cmd
+        if cmd:
+            self.__cmd, *self.__args = cmd
     
     def get_cmd(self):
         return self.__cmd
