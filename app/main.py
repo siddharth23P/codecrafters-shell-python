@@ -4,7 +4,7 @@ import os
 import sys
 import readline
 
-BUILTINS = {"exit", "echo", "type", "pwd", "cd"}
+BUILTINS = {"exit", "echo", "type", "pwd", "cd", "complete"}
 _matches = []
 def executables_in(directory):
     try:
@@ -159,6 +159,8 @@ def main():
                 os.chdir(path)
             except FileNotFoundError:
                 print(f"cd: {path}: No such file or directory",file=err)
+        elif cmd == "complete":
+            continue
         elif shutil.which(cmd):
             subprocess.run([cmd, *args],stdout=out,stderr=err)
         else:
