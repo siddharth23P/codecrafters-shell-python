@@ -5,7 +5,10 @@ class Complete:
         self.args = args
         self.out = out
         self.err = err
-        self.FUNC_MAP = {"-p": self.print_spec}
+        self.FUNC_MAP = {
+            "-p": self.print_spec,
+            "-C": self.register,
+            }
         self.FUNC_TO_CALL = []  # list of (flag, [flag args])
 
         self.parse_args()
@@ -28,4 +31,12 @@ class Complete:
             if name not in self.specs:
                 print(f"complete: {name}: no completion specification",file=self.err)
             else:
-                pass
+                print(f"complete -C \'{self.specs[name]}\' {name}",file=self.out)
+
+    def register(self,args):
+        if len(args) < 2:
+            print("complete: usage: complete -C command name",file=self.err)
+            return
+        path, *names = args
+        for name in names:
+            self.specs[name] = path
