@@ -52,7 +52,7 @@ def split_redirect(tokens):
     for i, tok in enumerate(tokens):
         if tok in (">","1>"):
             stdout = tokens[i+1] if i+1 < len(tokens) else None
-        elif tok in ("2>"):
+        elif tok == "2>":
             stderr = tokens[i+1] if i+1 < len(tokens) else None
     return tokens, stdout, stderr
 
