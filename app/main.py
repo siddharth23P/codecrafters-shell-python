@@ -16,6 +16,7 @@ def parse(line):
     args, cur, in_quote, in_dbl_quote, in_slash, started = [], "", False, False, False, False
     for ch in line:
         if in_slash:
+            in_slash = not in_slash
             cur += ch
             started = True
         elif ch == "\\":
