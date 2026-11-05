@@ -27,7 +27,7 @@ def parse(line):
             else:
                 cur += ch
             started = True
-        elif ch == " " and not in_quote:
+        elif ch == " " and not (in_quote or in_dbl_quote):
             if started:
                 args.append(cur)
                 cur, started = "", False
