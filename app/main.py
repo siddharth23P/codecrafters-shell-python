@@ -50,6 +50,7 @@ def completer(text,state):
     return _matches[state] if state < len(_matches) else None
 
 readline.set_completer(completer)
+readline.set_completer_delims(" \t\n")
 if "libedit" in (readline.__doc__ or ""):
     readline.parse_and_bind("bind ^I rl_complete")
 else:                                             # GNU readline (Linux / Codecrafters)
