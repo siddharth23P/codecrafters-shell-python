@@ -15,7 +15,7 @@ def get_executables():
         return []
 def completer(text,state):
     execs = get_executables()
-    match_list = sorted(execs.extend(BUILTINS))
+    match_list = sorted(set(execs) | BUILTINS)
     matches = [c + " " for c in match_list if c.startswith(text)]
     return matches[state] if state < len(matches) else None
 
@@ -77,7 +77,7 @@ def split_redirect(tokens):
             outa = next(it, None)
         elif tok == "2>":
             err = next(it, None)
-        elif tok in ("2>>"):
+        elif tok == "2>>":
             erra = next(it, None)
         else:
             cmd.append(tok)
