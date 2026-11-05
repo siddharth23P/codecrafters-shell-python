@@ -70,7 +70,7 @@ def main():
         elif cmd == "pwd":
             print(os.getcwd(), file=out)
         elif cmd == "cd":
-            path = os.path.expanduser(args[0] if args else "~", file=out)
+            path = os.path.expanduser(args[0] if args else "~")
             try:
                 os.chdir(path, file=out)
             except FileNotFoundError:
