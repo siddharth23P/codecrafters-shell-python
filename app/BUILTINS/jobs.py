@@ -19,7 +19,7 @@ class Jobs:
             if p.poll() is None:
                 print(f"[{num}]{mark}   {'Running':<24}{cmd} &", file=self.out)
             else:
-                print(f"[{num}]{mark}   {'Done':<24}{cmd} &", file=self.out)
+                print(f"[{num}]{mark}   {'Done':<24}{cmd}", file=self.out)
                 del self._jobs[num]
     
     def get_jobs(self):
