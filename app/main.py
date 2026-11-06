@@ -9,6 +9,7 @@ Completer(BUILTINS).install()
 
 def main():
     while True:
+        jobs.Jobs.reap()
         try:
             command = input("$ ")
         except EOFError:
