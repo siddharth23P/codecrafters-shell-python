@@ -6,7 +6,21 @@ class Jobs:
         self.print_job_results()
         
     def print_job_results(self):
-        pass
+        nums = sorted(self._jobs)
+        for num in nums:
+            p, cmd = self._jobs[num]
+            if num == nums[-1]:
+                mark = "+"
+            elif len(nums) > 1 and num == nums[-2]:
+                mark = "-"
+            else:
+                mark = " "
+            
+            if p.poll() is None:
+                print(f"[{num}]{mark}   {'Running':<24}{cmd} &", file=self.out)
+            else:
+                print(f"[{num}]{mark}   {'Done':<24}{cmd} &", file=self.out)
+                del self._jobs[num]
     
     def get_jobs(self):
         pass
