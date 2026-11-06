@@ -2,6 +2,7 @@ import subprocess
 class Jobs:
     _jobs = {}
     def __init__(self,args,out=None,err=None):
+        self.out = out
         self.print_job_results()
         
     def print_job_results(self):
