@@ -1,7 +1,6 @@
 import subprocess
-from collections import deque
 class Jobs:
-    __jobs__ = deque()
+    _jobs = {}
     def __init__(self,args,out=None,err=None):
         self.print_job_results()
         
@@ -14,7 +13,9 @@ class Jobs:
     @classmethod
     def run_bg_task(cls,argv,out,err):
         p = subprocess.run(argv,stdout=out,stderr=err)
-        
+        job_num = max(cls._jobs, default=0) + 1
+        cls._jobs[job_num] = (p, " ".join(argv))
+        print(f"[{job_num}] {p.pid}", flush=True, file=out)
         return p.pid
     
     @classmethod
