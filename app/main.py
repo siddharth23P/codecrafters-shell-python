@@ -1,9 +1,8 @@
 import shutil
-import subprocess
 import sys
 from .parser import Parser
 from .completer import Completer
-from .BUILTINS import COMMANDS
+from .BUILTINS import COMMANDS, jobs
 
 BUILTINS = set(COMMANDS)
 Completer(BUILTINS).install()
@@ -32,10 +31,17 @@ def main():
         out = open(out_file, out_file_perm) if out_file else sys.stdout
         err = open(err_file, err_file_perm) if err_file else sys.stderr
         
+        bg_task = bool(args) and args[-1] == "&"
+        if bg_task:
+            args = args[:-1]
+            
         if cmd in COMMANDS:
             COMMANDS[cmd](args,out,err)
         elif shutil.which(cmd):
-            subprocess.run([cmd, *args],stdout=out,stderr=err)
+            if bg_task:
+                jobs.Jobs.run_bg_task([cmd, *args], out, err)
+            else:
+                jobs.Jobs.run_fg_task([cmd, *args], out, err)
         else:
             print(f"{cmd}: command not found",file=err)
        
