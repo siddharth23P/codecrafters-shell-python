@@ -8,4 +8,5 @@ class ShellContext:
     job_reporter: object
     runner: object
     completion_specs: object
+    history: list
     registry: dict = field(default_factory=dict)  # builtin name -> callable(args, out, err)

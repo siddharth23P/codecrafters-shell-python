@@ -12,11 +12,13 @@ def build_shell():
     """Composition root: the only place concrete objects are created and wired together."""
     job_table = JobTable()
     job_formatter = JobFormatter()
+    history = []
     ctx = ShellContext(
         job_table=job_table,
         job_reporter=JobReporter(job_table, job_formatter),
         runner=Runner(job_table, job_formatter),
         completion_specs=CompletionSpecs(),
+        history=history
     )
     load_builtins(ctx)  # fills ctx.registry
 
@@ -42,6 +44,7 @@ def main():
         ctx.job_reporter.reap()
         try:
             command = input("$ ")
+            ctx.history.append(command)
         except EOFError:
             break
         except KeyboardInterrupt:  # Ctrl-C at the prompt: drop the line, new prompt (like bash)
