@@ -1,7 +1,7 @@
 import os
 import sys
 from .UTILS.context import ShellContext
-from .UTILS.parser import parse, ParseError
+from .UTILS.parser import make_parse, ParseError
 from .UTILS.executor import Executor, BuiltinHandler, ExternalHandler, NotFoundHandler
 from .BUILTINS import load as load_builtins
 from .BUILTINS.jobs import JobTable, JobFormatter, JobReporter, Runner
@@ -41,13 +41,14 @@ def main():
     history_cmd = ctx.registry["history"]  # the builtin owns history: recording, $HISTFILE load/save
     histfile = os.environ.get("HISTFILE")
     history_cmd.load_histfile(histfile)
+    parse = make_parse(ctx.registry["declare"].lookup)  # $VAR expansion reads declare's variables
     try:
-        repl(ctx, executor, history_cmd)
+        repl(ctx, executor, history_cmd, parse)
     finally:  # runs on EOF, on `exit` (SystemExit) and on errors, so history is always saved
         history_cmd.save_histfile(histfile)
 
 
-def repl(ctx, executor, history_cmd):
+def repl(ctx, executor, history_cmd, parse):
     while True:
         ctx.job_reporter.reap()
         try:

@@ -1,4 +1,5 @@
 """Command line -> ParsedCommand, in two steps: Lexer (characters) and CommandParser (grammar)."""
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -60,12 +61,15 @@ class Pipeline:
         return " | ".join(" ".join(c.argv) for c in self.commands)
 
 class Lexer:
-    """line -> tokens. Knows quotes, escapes and operator spelling. Nothing about meaning."""
+    """line -> tokens. Knows quotes, escapes, $variable expansion and operator spelling."""
 
     DOUBLE_QUOTE_ESCAPES = '\\"$`'  # inside "...", backslash only escapes these
+    VAR_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+    FIELD_SEPARATORS = re.compile(r"[ \t\n]+")  # bash's default IFS
 
-    def __init__(self, operators):
+    def __init__(self, operators, lookup=None):
         self._operators = set(operators)
+        self._lookup = lookup  # name -> value or None; None disables expansion
         # operator text without an fd prefix ("2>>" -> ">>"), longest first so ">>" beats ">"
         self._base_ops = sorted({op.lstrip("0123456789") for op in operators}, key=len, reverse=True)
 
@@ -79,6 +83,17 @@ class Lexer:
             if started:
                 tokens.append(Token(cur, Kind.WORD))
             cur, started, quoted = "", False, False
+
+        def expand_unquoted(value):
+            """Unquoted $VAR: split on whitespace into separate words; empty adds nothing,
+            so `echo a $EMPTY b` gets two args, not three."""
+            nonlocal cur, started, quoted
+            for n, field in enumerate(self.FIELD_SEPARATORS.split(value)):
+                if n:
+                    flush()
+                if field:
+                    cur += field
+                    started = quoted = True  # quoted: an expanded "2" must not become the fd in `2>`
 
         i = 0
         while i < len(line):
@@ -95,8 +110,18 @@ class Lexer:
                     nxt = line[i + 1]
                     cur += nxt if nxt in self.DOUBLE_QUOTE_ESCAPES else "\\" + nxt
                     i += 1
+                elif ch == "$" and (var := self._read_var(line, i)):
+                    value, length = var
+                    cur += value                 # inside "...": no splitting, empty stays an arg
+                    i += length
+                    continue
                 else:
                     cur += ch
+            elif ch == "$" and (var := self._read_var(line, i)):
+                value, length = var
+                expand_unquoted(value)
+                i += length
+                continue
             elif ch == "\\":
                 if i + 1 < len(line):
                     cur += line[i + 1]
@@ -128,6 +153,23 @@ class Lexer:
             raise ParseError(f"unexpected EOF while looking for matching `{quote}'")
         flush()
         return tokens
+
+    def _read_var(self, line, i):
+        """At a `$`: (value, chars consumed) for $NAME / ${NAME}, or None to keep `$` literal."""
+        if self._lookup is None:
+            return None
+        if line.startswith("${", i):
+            end = line.find("}", i + 2)
+            if end == -1:
+                raise ParseError("unexpected EOF while looking for matching `}'")
+            name = line[i + 2:end]
+            if not self.VAR_NAME.fullmatch(name):
+                raise ParseError(f"${{{name}}}: bad substitution")
+            return self._lookup(name) or "", end + 1 - i
+        match = self.VAR_NAME.match(line, i + 1)
+        if not match:
+            return None  # `$` alone, `$5`, `$?`...: not supported, stays literal
+        return self._lookup(match.group()) or "", match.end() - i
 
     def _match_operator(self, line, i, cur, started, quoted):
         """(operator text, chars consumed from line) or None."""
@@ -194,11 +236,14 @@ class CommandParser:
     def _is(tok, op):
         return tok.kind is Kind.OP and tok.text == op
 
-# Composition root
-_lexer = Lexer(OPERATORS)
 _parser = CommandParser(REDIRECTS)
 
 
-def parse(line):
-    """line -> Pipeline. Raises ParseError on bad syntax."""
-    return _parser.parse(_lexer.tokenize(line))
+def make_parse(lookup=None):
+    """Build parse(line) -> Pipeline. lookup(name) -> value|None enables $VAR expansion.
+    Raises ParseError on bad syntax."""
+    lexer = Lexer(OPERATORS, lookup)
+    return lambda line: _parser.parse(lexer.tokenize(line))
+
+
+parse = make_parse()  # no variable expansion
