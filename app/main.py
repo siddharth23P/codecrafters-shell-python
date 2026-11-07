@@ -1,6 +1,6 @@
+import os
 import sys
 from .UTILS.context import ShellContext
-from .UTILS.history import ReadlineHistory
 from .UTILS.parser import parse, ParseError
 from .UTILS.executor import Executor, BuiltinHandler, ExternalHandler, NotFoundHandler
 from .BUILTINS import load as load_builtins
@@ -18,7 +18,6 @@ def build_shell():
         job_reporter=JobReporter(job_table, job_formatter),
         runner=Runner(job_table, job_formatter),
         completion_specs=CompletionSpecs(),
-        history=ReadlineHistory(),
     )
     load_builtins(ctx)  # fills ctx.registry
 
@@ -39,7 +38,16 @@ def build_shell():
 def main():
     ctx, completer, executor = build_shell()
     completer.install()
+    history_cmd = ctx.registry["history"]  # the builtin owns history: recording, $HISTFILE load/save
+    histfile = os.environ.get("HISTFILE")
+    history_cmd.load_histfile(histfile)
+    try:
+        repl(ctx, executor, history_cmd)
+    finally:  # runs on EOF, on `exit` (SystemExit) and on errors, so history is always saved
+        history_cmd.save_histfile(histfile)
 
+
+def repl(ctx, executor, history_cmd):
     while True:
         ctx.job_reporter.reap()
         try:
@@ -51,7 +59,7 @@ def main():
             continue
 
         if command.strip():  # bash doesn't record empty lines
-            ctx.history.add(command)
+            history_cmd.add(command)
 
         try:
             executor.execute(parse(command))
