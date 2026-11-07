@@ -29,6 +29,7 @@ def build_shell():
         [BuiltinHandler(ctx.registry),      # order matters: first that can_handle wins
          ExternalHandler(ctx.runner)],
         fallback=NotFoundHandler(),
+        runner=ctx.runner,
     )
     return ctx, completer, executor
 

@@ -107,20 +107,40 @@ class Runner:
         self._formatter = formatter
         self._popen = popen  # injectable, so tests can pass a fake
 
-    def run_foreground(self, argv, out, err):
-        process = self._popen(argv, stdout=out, stderr=err)
+    def spawn(self, argv, stdin, out, err, executable=None):
+        """Start without waiting. executable: already-resolved path, so Popen doesn't search PATH
+        again; argv[0] stays the bare name."""
+        return self._popen(argv, executable=executable, stdin=stdin, stdout=out, stderr=err)
+
+    def wait_all(self, processes):
         try:
-            process.wait()
+            for process in processes:
+                process.wait()
         except KeyboardInterrupt:
-            # Ctrl-C reaches the child too (same terminal); wait for it to exit so it isn't left a zombie
-            process.wait()
+            # Ctrl-C reaches the children too (same terminal); wait so none is left a zombie
+            for process in processes:
+                process.wait()
             print()
 
-    def run_background(self, argv, out, err):
-        process = self._popen(argv, stdout=out, stderr=err)
-        job = self._registry.add(process, " ".join(argv))
+    def background(self, processes, cmd):
+        job = self._registry.add(ProcessGroup(processes), cmd)
         # always to the terminal, even when the job's output is redirected
         print(self._formatter.started_line(job), flush=True)
+
+
+class ProcessGroup:
+    """Several processes tracked as one job. Same poll()/pid interface Job uses on a Popen."""
+
+    def __init__(self, processes):
+        self._processes = processes
+
+    @property
+    def pid(self):
+        return self._processes[-1].pid  # bash shows the last stage's pid
+
+    def poll(self):
+        codes = [p.poll() for p in self._processes]  # poll every stage so finished ones are reaped
+        return None if None in codes else codes[-1]
 
 
 def create(ctx):

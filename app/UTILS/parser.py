@@ -19,7 +19,6 @@ class Redirect:
     stream: str  # "stdout" | "stderr"
     mode: str    # "w" truncate | "a" append
 
-
 # Add a redirect operator = add a line here. Lexer and CommandParser pick it up.
 REDIRECTS = {
     ">":   Redirect("stdout", "w"),
@@ -30,7 +29,8 @@ REDIRECTS = {
     "2>>": Redirect("stderr", "a"),
 }
 BACKGROUND = "&"
-OPERATORS = set(REDIRECTS) | {BACKGROUND}
+PIPE = "|"
+OPERATORS = set(REDIRECTS) | {BACKGROUND, PIPE}
 
 
 class ParseError(Exception):
@@ -41,7 +41,6 @@ class ParseError(Exception):
 class ParsedCommand:
     argv: list[str] = field(default_factory=list)
     redirects: dict[str, tuple[str, str]] = field(default_factory=dict)  # stream -> (path, mode)
-    background: bool = False
 
     @property
     def cmd(self):
@@ -51,6 +50,14 @@ class ParsedCommand:
     def args(self):
         return self.argv[1:]
 
+@dataclass
+class Pipeline:
+    commands: list[ParsedCommand]
+    background: bool = False
+    
+    @property
+    def text(self):
+        return " | ".join(" ".join(c.argv) for c in self.commands)
 
 class Lexer:
     """line -> tokens. Knows quotes, escapes and operator spelling. Nothing about meaning."""
@@ -134,15 +141,33 @@ class Lexer:
                 return base, len(base)
         return None
 
-
 class CommandParser:
-    """tokens -> ParsedCommand. Knows grammar (redirects, &), not characters."""
+    """tokens -> Pipeline of ParsedCommands. Knows grammar (redirects, |, &), not characters."""
 
-    def __init__(self, redirects, background=BACKGROUND):
+    def __init__(self, redirects, background=BACKGROUND, pipe=PIPE):
         self._redirects = redirects
         self._background = background
+        self._pipe = pipe
 
-    def parse(self, tokens):
+    def parse(self, tokens) -> Pipeline:
+        background = bool(tokens) and self._is(tokens[-1], self._background)
+        if background:
+            tokens = tokens[:-1]  # & applies to the whole pipeline
+            if not tokens:
+                raise self._unexpected(Token(self._background, Kind.OP))  # bare `&`
+        segments = [[]]
+        for tok in tokens:
+            if self._is(tok,self._pipe):
+                if not segments[-1]:
+                    raise self._unexpected(tok)
+                segments.append([])
+            else:
+                segments[-1].append(tok)
+        if len(segments) > 1 and not segments[-1]:
+            raise self._unexpected(None)
+        return Pipeline([self._parse_command(s) for s in segments], background)
+    
+    def _parse_command(self,tokens) -> ParsedCommand:
         cmd = ParsedCommand()
         i = 0
         while i < len(tokens):
@@ -155,12 +180,9 @@ class CommandParser:
                 cmd.redirects[rule.stream] = (nxt.text, rule.mode)
                 i += 2
                 continue
-            if tok.kind is Kind.OP and tok.text == self._background:
-                if nxt is not None:  # only valid as the last token: `a & b`, `a && b` unsupported
-                    raise self._unexpected(tok)
-                cmd.background = True
-            else:
-                cmd.argv.append(tok.text)
+            if self._is(tok, self._background):
+                raise self._unexpected(tok)  # a trailing & was removed in parse(); any other is unsupported
+            cmd.argv.append(tok.text)
             i += 1
         return cmd
 
@@ -168,6 +190,9 @@ class CommandParser:
     def _unexpected(tok):
         return ParseError(f"syntax error near unexpected token `{tok.text if tok else 'newline'}'")
 
+    @staticmethod
+    def _is(tok, op):
+        return tok.kind is Kind.OP and tok.text == op
 
 # Composition root
 _lexer = Lexer(OPERATORS)
@@ -175,5 +200,5 @@ _parser = CommandParser(REDIRECTS)
 
 
 def parse(line):
-    """line -> ParsedCommand. Raises ParseError on bad syntax."""
+    """line -> Pipeline. Raises ParseError on bad syntax."""
     return _parser.parse(_lexer.tokenize(line))
